@@ -30,5 +30,11 @@ export class Product {
   searchTerm: string;
 
   @Column()
+  image: string;
+
+  @Column()
+  brand: string;
+
+  @Column()
   scrapedAt: Date;
 }

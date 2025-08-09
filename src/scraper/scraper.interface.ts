@@ -1,6 +1,16 @@
-import * as cheerio from 'cheerio';
 import { Product } from '../entities/product.entity';
 
+export interface PlatformConfig {
+  baseUrl: string;
+  separator: string;
+  country: string;
+  currency: string;
+  store: string;
+}
+
 export interface PlatformScraper {
-  scrape($: cheerio.CheerioAPI, searchTerm: string): Partial<Product>[];
+  scrape(
+    searchTerm: string,
+    $?: cheerio.CheerioAPI,
+  ): Promise<Partial<Product>[]>;
 }
