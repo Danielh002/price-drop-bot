@@ -15,7 +15,7 @@ export class ScraperController {
 
     const platforms = [
       Source.MERCADO_LIBRE,
-      // Source.FALABELLA,
+      Source.FALABELLA,
       Source.EXITO,
       // Source.ALKOSTO,
     ];

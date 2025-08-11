@@ -56,8 +56,7 @@ export class ScraperService {
   > = {
     [Source.MERCADO_LIBRE]: (config, httpService) =>
       new MercadoLibreScraper(config, httpService),
-    [Source.FALABELLA]: (config, httpService) =>
-      new FalabellaScraper(config, httpService),
+    [Source.FALABELLA]: (config) => new FalabellaScraper(config),
     [Source.EXITO]: (config, httpService) =>
       new ExitoScraper(config, httpService),
     [Source.ALKOSTO]: (config, httpService) =>
