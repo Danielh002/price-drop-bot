@@ -62,7 +62,6 @@ export class FalabellaScraper implements PlatformScraper {
       const html = await page.content();
       const $local = cheerio.load(html);
 
-      // Flexible selector for dynamic grid classes
       $local('#testId-searchResults-products .grid-pod').each((_, element) => {
         const link = $local(element).find('a.pod-link');
         const name =
