@@ -17,7 +17,7 @@ export class ScraperController {
       Source.MERCADO_LIBRE,
       Source.FALABELLA,
       Source.EXITO,
-      // Source.ALKOSTO,
+      Source.ALKOSTO,
     ];
 
     const allProducts: Product[] = [];
@@ -26,27 +26,14 @@ export class ScraperController {
       try {
         const products = await this.scraperService.scrape(searchTerm, platform);
         allProducts.push(...products);
-        await new Promise((resolve) => setTimeout(resolve, 2000));
       } catch (error) {
         this.logger.log(`Failed to scrape ${platform}: ${error.message}`);
       }
     }
 
-    /*
-    const csvContent = [
-      'Name,Price,URL,Store,Seller,Country,Currency,ScrapedAt',
-      ...allProducts.map(
-        (item) =>
-          `"${item.name.replace(/"/g, '""')}",${item.price},"${item.url}",${item.store},${item.seller},${item.country},${item.currency},${item.scrapedAt.toISOString()}`,
-      ),
-    ].join('\n');
-    const fileName = `products_${searchTerm.replace(' ', '_')}_${Date.now()}.csv`;
-    writeFileSync(fileName, csvContent, 'utf-8');
-    */
-
     const cheapestProducts =
       await this.scraperService.getCheapestProducts(searchTerm);
 
-    return { data: allProducts, cheapest: cheapestProducts, csvFile: 'NoFile' };
+    return { data: allProducts, cheapest: cheapestProducts };
   }
 }

@@ -74,38 +74,6 @@ export class MercadoLibreScraper implements PlatformScraper {
             scrapedAt: new Date(),
           });
         }
-
-        const altOption = $local(element).find(
-          '.poly-buy-box__alternative-option',
-        );
-        if (altOption.length) {
-          const altPrice =
-            altOption
-              .find('.andes-money-amount__fraction')
-              .text()
-              .trim()
-              .replace(/\./g, '') || 'N/A';
-          const altUrl = altOption.attr('href') || 'N/A';
-          const altSeller =
-            altOption
-              .find('.poly-component__seller')
-              .text()
-              .trim()
-              .replace('Por ', '') || 'MercadoLibre';
-          if (altPrice !== 'N/A' && altUrl !== 'N/A') {
-            products.push({
-              name,
-              price: parseFloat(altPrice),
-              url: altUrl,
-              store: this.config.store,
-              country: this.config.country,
-              currency: this.config.currency,
-              searchTerm,
-              seller: altSeller,
-              scrapedAt: new Date(),
-            });
-          }
-        }
       });
 
       return products;

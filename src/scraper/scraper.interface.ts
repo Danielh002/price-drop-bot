@@ -1,4 +1,14 @@
 import { Product } from '../entities/product.entity';
+export interface PlatformScraper {
+  scrape(
+    searchTerm: string,
+    $?: cheerio.CheerioAPI,
+  ): Promise<Partial<Product>[]>;
+}
+
+export interface FilterConfig {
+  priceQuantile: number; // Fallback for small result sets
+}
 
 export interface PlatformConfig {
   baseUrl: string;
@@ -6,11 +16,5 @@ export interface PlatformConfig {
   country: string;
   currency: string;
   store: string;
-}
-
-export interface PlatformScraper {
-  scrape(
-    searchTerm: string,
-    $?: cheerio.CheerioAPI,
-  ): Promise<Partial<Product>[]>;
+  filterConfig?: FilterConfig;
 }

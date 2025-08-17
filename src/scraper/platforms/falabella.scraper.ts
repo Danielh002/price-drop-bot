@@ -3,6 +3,7 @@ import type { Product } from '../../entities/product.entity';
 import * as cheerio from 'cheerio';
 import * as puppeteer from 'puppeteer';
 import { Logger } from '@nestjs/common';
+import { writeFileSync } from 'fs';
 
 export class FalabellaScraper implements PlatformScraper {
   private readonly logger = new Logger(FalabellaScraper.name);
@@ -62,7 +63,7 @@ export class FalabellaScraper implements PlatformScraper {
       const html = await page.content();
       const $local = cheerio.load(html);
 
-      // writeFileSync('falabella.html', html) -> For debugging purposes
+      writeFileSync('falabella.html', html);
 
       $local('#testId-searchResults-products .grid-pod').each((_, element) => {
         const link = $local(element).find('a.pod-link');
@@ -72,7 +73,7 @@ export class FalabellaScraper implements PlatformScraper {
           $local(element).find('.title-rebrand').text().trim() || 'N/A';
         let price =
           $local(element)
-            .find('.copy10.primary, .copy10')
+            .find('.copy10.primary.high')
             .text()
             .trim()
             .replace(/[^\d]/g, '') || 'N/A';
@@ -91,7 +92,7 @@ export class FalabellaScraper implements PlatformScraper {
           imageElement.attr('src') ||
           'N/A';
         if (name !== 'N/A' && price !== 'N/A' && productUrl !== 'N/A') {
-          products.push({
+          const product = {
             name,
             price: parseFloat(price),
             url: productUrl.startsWith('http')
@@ -105,7 +106,8 @@ export class FalabellaScraper implements PlatformScraper {
             image,
             brand,
             scrapedAt: new Date(),
-          });
+          };
+          products.push(product);
         }
       });
 
