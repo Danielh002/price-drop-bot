@@ -4,6 +4,7 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import * as cheerio from 'cheerio';
 import { Logger } from '@nestjs/common';
+import { writeFileSync } from 'fs';
 
 export class MercadoLibreScraper implements PlatformScraper {
   private readonly logger = new Logger(MercadoLibreScraper.name);
@@ -39,10 +40,12 @@ export class MercadoLibreScraper implements PlatformScraper {
       );
       const $local = cheerio.load(response.data);
 
+      writeFileSync('exito.html', response.data);
+
       $local('.ui-search-layout__item').each((_, element) => {
         const name =
           $local(element).find('.poly-component__title').text().trim() || 'N/A';
-        let price =
+        const price =
           $local(element)
             .find('.poly-price__current .andes-money-amount__fraction')
             .first()
@@ -58,7 +61,10 @@ export class MercadoLibreScraper implements PlatformScraper {
             .trim()
             .replace('Por ', '') || 'MercadoLibre';
         const image =
-          $local(element).find('.poly-component__picture').attr('src') || 'N/A';
+          $local(element).find('.poly-component__picture').attr('data-src') ||
+          $local(element).find('.poly-component__picture').attr('src') ||
+          'N/A';
+
         if (name !== 'N/A' && price !== 'N/A' && url !== 'N/A') {
           products.push({
             name,

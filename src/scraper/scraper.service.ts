@@ -44,7 +44,7 @@ const platformConfig: Record<Source, PlatformConfig> = {
     },
   },
   [Source.EXITO]: {
-    baseUrl: 'https://www.exito.com/s?q=',
+    baseUrl: 'https://www.exito.com/',
     separator: '%20',
     country: 'Colombia',
     currency: 'COP',
@@ -127,8 +127,6 @@ export class ScraperService {
         HttpStatus.NOT_FOUND,
       );
     }
-
-    await this.writeProductsToCsv(searchTerm, filteredProducts, platform);
 
     const normalizedProducts = this.deduplicateProducts(filteredProducts);
     await this.productRepository.save(normalizedProducts);
@@ -267,10 +265,9 @@ export class ScraperService {
       .getMany();
   }
 
-  private async writeProductsToCsv(
+  async writeProductsToCsv(
     searchTerm: string,
     products: Partial<Product>[],
-    platform: string,
   ): Promise<string> {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `products_${searchTerm.replace(' ', '_')}_${timestamp}.csv`;

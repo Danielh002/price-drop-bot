@@ -31,6 +31,8 @@ export class ScraperController {
       }
     }
 
+    this.scraperService.writeProductsToCsv(searchTerm, allProducts);
+
     const cheapestProducts =
       await this.scraperService.getCheapestProducts(searchTerm);
 
