@@ -5,7 +5,7 @@ import { Product } from 'src/entities/product.entity';
 @Controller('scraper')
 export class ScraperController {
   private readonly logger = new Logger(ScraperController.name);
-  constructor(private readonly scraperService: ScraperService) {}
+  constructor(private readonly scraperService: ScraperService) { }
 
   @Get('search')
   async search(@Query('term') searchTerm: string) {
@@ -20,16 +20,17 @@ export class ScraperController {
       Source.ALKOSTO,
     ];
 
-    const allProducts: Product[] = [];
-
+    const allProductsPromises: Promise<Product[]>[] = [];
     for (const platform of platforms) {
       try {
-        const products = await this.scraperService.scrape(searchTerm, platform);
-        allProducts.push(...products);
+        allProductsPromises.push(
+          this.scraperService.scrape(searchTerm, platform),
+        );
       } catch (error) {
         this.logger.log(`Failed to scrape ${platform}: ${error.message}`);
       }
     }
+    const allProducts: Product[] = (await Promise.allSettled(allProductsPromises)).filter(result => result.status === 'fulfilled').map(result => result.value).flat();
 
     this.scraperService.writeProductsToCsv(searchTerm, allProducts);
 
