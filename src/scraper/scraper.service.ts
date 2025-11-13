@@ -121,6 +121,15 @@ export class ScraperService {
       searchTerm,
       config.filterConfig,
     );
+    this.logger.debug(
+      `Filtered ${filteredProducts.length} products from ${platform}`,
+      filteredProducts.map((product) => ({
+        name: product.name,
+        price: product.price,
+        url: product.url,
+        store: product.store,
+      })),
+    );
     if (!filteredProducts.length) {
       throw new HttpException(
         `No precise data after filtering for ${platform}`,
