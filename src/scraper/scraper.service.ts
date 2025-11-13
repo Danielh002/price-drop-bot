@@ -98,10 +98,7 @@ export class ScraperService {
     return this.scrapers[source](platformConfig[source], this.httpService);
   }
 
-  async scrape(
-    searchTerm: string,
-    platform: string,
-  ): Promise<Product[]> {
+  async scrape(searchTerm: string, platform: string): Promise<Product[]> {
     const source = platform.toLowerCase() as Source;
     const config = platformConfig[source];
     if (!config) {
@@ -118,8 +115,6 @@ export class ScraperService {
         HttpStatus.NOT_FOUND,
       );
     }
-
-    console.log('products', products);
 
     const filteredProducts = this.filterPreciseProducts(
       products,
