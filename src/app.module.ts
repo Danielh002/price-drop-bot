@@ -5,6 +5,8 @@ import { Product } from './entities/product.entity';
 import { Alert } from './entities/alert.entity';
 import { AlertsModule } from './alerts/alert.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
@@ -18,5 +20,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     ScraperModule,
     AlertsModule,
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

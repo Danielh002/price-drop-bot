@@ -98,7 +98,10 @@ export class ScraperService {
     return this.scrapers[source](platformConfig[source], this.httpService);
   }
 
-  async scrape(searchTerm: string, platform: string): Promise<Product[]> {
+  async scrape(
+    searchTerm: string,
+    platform: string,
+  ): Promise<Product[]> {
     const source = platform.toLowerCase() as Source;
     const config = platformConfig[source];
     if (!config) {
@@ -115,6 +118,8 @@ export class ScraperService {
         HttpStatus.NOT_FOUND,
       );
     }
+
+    console.log('products', products);
 
     const filteredProducts = this.filterPreciseProducts(
       products,
@@ -133,6 +138,30 @@ export class ScraperService {
     return normalizedProducts as Product[];
   }
 
+  async scrapeRaw(
+    searchTerm: string,
+    platform: string,
+  ): Promise<Partial<Product>[]> {
+    const source = platform.toLowerCase() as Source;
+    const config = platformConfig[source];
+    if (!config) {
+      throw new HttpException(
+        `Platform ${platform} is not supported`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const products = await this.getScraper(platform).scrape(searchTerm);
+    if (!products.length) {
+      throw new HttpException(
+        `No data scraped from ${platform}`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return products;
+  }
+
   private filterPreciseProducts(
     products: Partial<Product>[],
     searchTerm: string,
@@ -141,7 +170,7 @@ export class ScraperService {
     if (!products.length) return [];
 
     const matchingProducts = products.filter((p) =>
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()),
+      this.isRelevantProduct(p.name ?? '', searchTerm),
     );
     if (!matchingProducts.length) {
       console.log('No products match the search term:', searchTerm);
@@ -238,6 +267,38 @@ export class ScraperService {
     );
 
     return filteredProducts;
+  }
+
+  private isRelevantProduct(name: string, searchTerm: string): boolean {
+    if (!name) return false;
+    const normalizedName = this.normalizeText(name);
+    const normalizedSearchTerm = this.normalizeText(searchTerm);
+
+    if (!normalizedName || !normalizedSearchTerm) return false;
+
+    if (
+      normalizedName.includes(normalizedSearchTerm) ||
+      normalizedSearchTerm.includes(normalizedName)
+    ) {
+      return true;
+    }
+
+    const nameTokens = new Set(normalizedName.split(' '));
+    const searchTokens = normalizedSearchTerm.split(' ');
+    const matchingTokens = searchTokens.filter((token) =>
+      nameTokens.has(token),
+    );
+
+    const matchRatio = matchingTokens.length / searchTokens.length;
+    return matchRatio >= 0.6; // Require at least 60% token overlap
+  }
+
+  private normalizeText(value: string): string {
+    return value
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   private deduplicateProducts(
