@@ -1,14 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { config } from 'dotenv';
-
-config();
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
   const allowedOrigins =
-    process.env.WEB_ORIGINS?.split(',').map((origin) => origin.trim()) ||
-    [
+    configService.get<string[]>('app.webOrigins') || [
       'http://localhost:5173',
       'http://127.0.0.1:5173',
     ];
@@ -17,6 +15,6 @@ async function bootstrap() {
     origin: allowedOrigins,
     credentials: true,
   });
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(configService.get<number>('app.port') ?? 3000);
 }
 bootstrap();

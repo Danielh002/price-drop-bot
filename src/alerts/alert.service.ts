@@ -70,6 +70,7 @@ export class AlertsService {
       if (cheapestProduct && lowestPrice <= alert.priceThreshold) {
         const previousLowest = await this.productRepository
           .createQueryBuilder('product')
+          .leftJoinAndSelect('product.store', 'store')
           .where('product.searchTerm = :searchTerm', {
             searchTerm: alert.searchTerm,
           })
@@ -77,8 +78,12 @@ export class AlertsService {
           .getOne();
 
         if (!previousLowest || lowestPrice < previousLowest.price) {
+          const storeLabel =
+            cheapestProduct.store?.name ??
+            cheapestProduct.store?.code ??
+            'N/A';
           console.log(
-            `Alert triggered for ${alert.email}: ${cheapestProduct.name} is ${lowestPrice} COP at ${cheapestProduct.store} (Seller: ${cheapestProduct.seller})`,
+            `Alert triggered for ${alert.email}: ${cheapestProduct.name} is ${lowestPrice} COP at ${storeLabel} (Seller: ${cheapestProduct.seller ?? 'N/A'})`,
           );
           // TODO: Implement email or Telegram notification
         }

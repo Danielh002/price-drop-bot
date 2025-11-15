@@ -1,5 +1,8 @@
-import { PlatformConfig, PlatformScraper } from '../scraper.interface';
-import type { Product } from '../../entities/product.entity';
+import {
+  PlatformConfig,
+  PlatformScraper,
+  ScrapedProduct,
+} from '../scraper.interface';
 import * as cheerio from 'cheerio';
 import * as puppeteer from 'puppeteer';
 import { Logger } from '@nestjs/common';
@@ -23,8 +26,8 @@ export class FalabellaScraper implements PlatformScraper {
   async scrape(
     searchTerm: string,
     $?: cheerio.CheerioAPI,
-  ): Promise<Partial<Product>[]> {
-    const products: Partial<Product>[] = [];
+  ): Promise<ScrapedProduct[]> {
+    const products: ScrapedProduct[] = [];
     const url = this.createSearchUrl(searchTerm);
 
     const browser = await puppeteer.launch({

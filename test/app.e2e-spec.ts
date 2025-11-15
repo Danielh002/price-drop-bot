@@ -31,8 +31,7 @@ describe('AppController (e2e)', () => {
     const searchQuery =
       process.env.SCRAPER_E2E_QUERY ?? 'Consola Nintendo Switch 2';
     const skipLiveTests = process.env.SCRAPER_SKIP_LIVE_TESTS === 'true';
-    const [falabella, ...rest] = Object.values(Source);
-    const availableStores = rest;
+    const availableStores = Object.values(Source);
 
     const maybeTest = skipLiveTests ? it.skip : it;
 

@@ -4,9 +4,11 @@ import { ScraperController } from './scraper.controller';
 import { HttpModule } from '@nestjs/axios';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Product } from '../entities/product.entity';
+import { Store } from '../entities/store.entity';
+import { ProductPrice } from '../entities/product-price.entity';
 
 @Module({
-  imports: [HttpModule, TypeOrmModule.forFeature([Product])],
+  imports: [HttpModule, TypeOrmModule.forFeature([Product, Store, ProductPrice])],
   controllers: [ScraperController],
   providers: [ScraperService],
   exports: [ScraperService],

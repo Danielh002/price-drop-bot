@@ -1,5 +1,8 @@
-import { PlatformScraper, PlatformConfig } from '../scraper.interface';
-import { Product } from '../../entities/product.entity';
+import {
+  PlatformScraper,
+  PlatformConfig,
+  ScrapedProduct,
+} from '../scraper.interface';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { HttpException, HttpStatus } from '@nestjs/common';
@@ -32,8 +35,8 @@ export class AlkostoScraper implements PlatformScraper {
     };
   }
 
-  async scrape(searchTerm: string): Promise<Partial<Product>[]> {
-    const products: Partial<Product>[] = [];
+  async scrape(searchTerm: string): Promise<ScrapedProduct[]> {
+    const products: ScrapedProduct[] = [];
     let page = 0;
     const maxPages = 2;
 

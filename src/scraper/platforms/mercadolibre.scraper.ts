@@ -1,5 +1,8 @@
-import { PlatformScraper, PlatformConfig } from '../scraper.interface';
-import { Product } from '../../entities/product.entity';
+import {
+  PlatformScraper,
+  PlatformConfig,
+  ScrapedProduct,
+} from '../scraper.interface';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import * as cheerio from 'cheerio';
@@ -22,8 +25,8 @@ export class MercadoLibreScraper implements PlatformScraper {
   async scrape(
     searchTerm: string,
     $?: cheerio.CheerioAPI,
-  ): Promise<Partial<Product>[]> {
-    const products: Partial<Product>[] = [];
+  ): Promise<ScrapedProduct[]> {
+    const products: ScrapedProduct[] = [];
     const url = this.createSearchUrl(searchTerm);
 
     const headers = {

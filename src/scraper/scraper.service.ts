@@ -7,6 +7,7 @@ import {
   FilterConfig,
   PlatformConfig,
   PlatformScraper,
+  ScrapedProduct,
 } from './scraper.interface';
 import { MercadoLibreScraper } from './platforms/mercadolibre.scraper';
 import { FalabellaScraper } from './platforms/falabella.scraper';
@@ -14,6 +15,8 @@ import { ExitoScraper } from './platforms/exito.scraper';
 import { AlkostoScraper } from './platforms/alkosto.scraper';
 import { createObjectCsvWriter } from 'csv-writer';
 import { kmeans } from 'ml-kmeans';
+import { Store, ScrapeType } from '../entities/store.entity';
+import { ProductPrice } from '../entities/product-price.entity';
 
 export enum Source {
   FALABELLA = 'falabella',
@@ -65,9 +68,36 @@ const platformConfig: Record<Source, PlatformConfig> = {
   },
 };
 
+const storeMetadata: Record<
+  Source,
+  { name: string; urlBase: string; scrapeType: ScrapeType; logoUrl?: string }
+> = {
+  [Source.MERCADO_LIBRE]: {
+    name: 'Mercado Libre',
+    urlBase: 'https://www.mercadolibre.com.co',
+    scrapeType: 'html',
+  },
+  [Source.FALABELLA]: {
+    name: 'Falabella',
+    urlBase: 'https://www.falabella.com.co',
+    scrapeType: 'headless',
+  },
+  [Source.EXITO]: {
+    name: 'Éxito',
+    urlBase: 'https://www.exito.com',
+    scrapeType: 'api',
+  },
+  [Source.ALKOSTO]: {
+    name: 'Alkosto',
+    urlBase: 'https://www.alkosto.com',
+    scrapeType: 'api',
+  },
+};
+
 @Injectable()
 export class ScraperService {
   private readonly logger = new Logger(ScraperService.name);
+  private readonly storeCache = new Map<Source, Store>();
   private readonly scrapers: Record<
     Source,
     (config: PlatformConfig, httpService: HttpService) => PlatformScraper
@@ -85,6 +115,10 @@ export class ScraperService {
     private readonly httpService: HttpService,
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
+    @InjectRepository(Store)
+    private readonly storeRepository: Repository<Store>,
+    @InjectRepository(ProductPrice)
+    private readonly productPriceRepository: Repository<ProductPrice>,
   ) {}
 
   private getScraper(platform: string): PlatformScraper {
@@ -96,6 +130,86 @@ export class ScraperService {
       );
     }
     return this.scrapers[source](platformConfig[source], this.httpService);
+  }
+
+  private async getOrCreateStore(source: Source): Promise<Store> {
+    if (this.storeCache.has(source)) {
+      return this.storeCache.get(source)!;
+    }
+
+    let store = await this.storeRepository.findOne({
+      where: { code: source },
+    });
+
+    if (!store) {
+      const metadata = storeMetadata[source];
+      const config = platformConfig[source];
+      store = this.storeRepository.create({
+        code: source,
+        name: metadata.name,
+        urlBase: metadata.urlBase,
+        logoUrl: metadata.logoUrl,
+        scrapeType: metadata.scrapeType,
+        country: config.country,
+      });
+      store = await this.storeRepository.save(store);
+    }
+
+    this.storeCache.set(source, store);
+    return store;
+  }
+
+  private async persistProducts(
+    searchTerm: string,
+    source: Source,
+    products: ScrapedProduct[],
+  ): Promise<Product[]> {
+    const store = await this.getOrCreateStore(source);
+    const savedProducts: Product[] = [];
+
+    for (const scrapedProduct of products) {
+      const existing = await this.productRepository.findOne({
+        where: {
+          url: scrapedProduct.url,
+          store: { id: store.id },
+        },
+        relations: {
+          store: true,
+        },
+      });
+
+      const entity =
+        existing ??
+        this.productRepository.create({
+          store,
+          url: scrapedProduct.url,
+        });
+
+      entity.name = scrapedProduct.name;
+      entity.price = scrapedProduct.price;
+      entity.currency = scrapedProduct.currency || entity.currency || 'COP';
+      entity.image = scrapedProduct.image ?? entity.image;
+      entity.brand = scrapedProduct.brand ?? entity.brand;
+      entity.seller = scrapedProduct.seller ?? entity.seller;
+      entity.country =
+        scrapedProduct.country ?? entity.country ?? platformConfig[source].country;
+      entity.searchTerm = searchTerm;
+      entity.category = scrapedProduct.category ?? entity.category;
+      entity.sku = scrapedProduct.sku ?? entity.sku;
+      entity.ean = scrapedProduct.ean ?? entity.ean;
+      entity.scrapedAt = scrapedProduct.scrapedAt ?? new Date();
+
+      const saved = await this.productRepository.save(entity);
+      const priceRecord = this.productPriceRepository.create({
+        product: saved,
+        price: scrapedProduct.price,
+        scrapedAt: scrapedProduct.scrapedAt ?? new Date(),
+      });
+      await this.productPriceRepository.save(priceRecord);
+      savedProducts.push(saved);
+    }
+
+    return savedProducts;
   }
 
   async scrape(searchTerm: string, platform: string): Promise<Product[]> {
@@ -138,14 +252,18 @@ export class ScraperService {
     }
 
     const normalizedProducts = this.deduplicateProducts(filteredProducts);
-    await this.productRepository.save(normalizedProducts);
-    return normalizedProducts as Product[];
+    const persistedProducts = await this.persistProducts(
+      searchTerm,
+      source,
+      normalizedProducts,
+    );
+    return persistedProducts;
   }
 
   async scrapeRaw(
     searchTerm: string,
     platform: string,
-  ): Promise<Partial<Product>[]> {
+  ): Promise<ScrapedProduct[]> {
     const source = platform.toLowerCase() as Source;
     const config = platformConfig[source];
     if (!config) {
@@ -167,10 +285,10 @@ export class ScraperService {
   }
 
   private filterPreciseProducts(
-    products: Partial<Product>[],
+    products: ScrapedProduct[],
     searchTerm: string,
     filterConfig: FilterConfig,
-  ): Partial<Product>[] {
+  ): ScrapedProduct[] {
     if (!products.length) return [];
 
     const matchingProducts = products.filter((p) =>
@@ -198,7 +316,7 @@ export class ScraperService {
     const numClusters = iqr > prices[prices.length - 1] * 0.5 ? 2 : 1; // Use 2 clusters if significant spread (e.g., accessories present)
 
     // K-means clustering (fallback to median for small sets)
-    let filteredProducts: Partial<Product>[];
+    let filteredProducts: ScrapedProduct[];
     if (matchingProducts.length >= 3) {
       // Need at least 3 for clustering
       try {
@@ -306,9 +424,9 @@ export class ScraperService {
   }
 
   private deduplicateProducts(
-    products: Partial<Product>[],
-  ): Partial<Product>[] {
-    const seen = new Map<string, Partial<Product>>();
+    products: ScrapedProduct[],
+  ): ScrapedProduct[] {
+    const seen = new Map<string, ScrapedProduct>();
     for (const product of products) {
       const key = `${product.store}:${product.name.toLowerCase().replace(/[^a-z0-9]/g, '')}:${product.seller}`;
       if (
@@ -324,6 +442,7 @@ export class ScraperService {
   async getCheapestProducts(searchTerm: string): Promise<Product[]> {
     return this.productRepository
       .createQueryBuilder('product')
+      .leftJoinAndSelect('product.store', 'store')
       .where('product.searchTerm = :searchTerm', { searchTerm })
       .orderBy('product.price', 'ASC')
       .limit(5)
@@ -360,7 +479,10 @@ export class ScraperService {
       url: p.url || 'N/A',
       image: p.image || 'N/A',
       seller: p.seller || 'N/A',
-      store: p.store || 'N/A',
+      store:
+        typeof p.store === 'string'
+          ? p.store
+          : p.store?.code || p.store?.name || 'N/A',
       brand: p.brand || 'N/A',
       country: p.country || 'N/A',
       currency: p.currency || 'N/A',

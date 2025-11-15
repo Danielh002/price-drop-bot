@@ -1,5 +1,8 @@
-import { PlatformConfig, PlatformScraper } from '../scraper.interface';
-import { Product } from '../../entities/product.entity';
+import {
+  PlatformConfig,
+  PlatformScraper,
+  ScrapedProduct,
+} from '../scraper.interface';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { Logger } from '@nestjs/common';
@@ -32,8 +35,8 @@ export class ExitoScraper implements PlatformScraper {
     )}`;
   }
 
-  private parseProducts(data: any, searchTerm: string): Partial<Product>[] {
-    const products: Partial<Product>[] = [];
+  private parseProducts(data: any, searchTerm: string): ScrapedProduct[] {
+    const products: ScrapedProduct[] = [];
     const items = data?.data?.search?.products.edges || [];
 
     for (const item of items) {
@@ -64,7 +67,7 @@ export class ExitoScraper implements PlatformScraper {
     return products;
   }
 
-  async scrape(searchTerm: string): Promise<Partial<Product>[]> {
+  async scrape(searchTerm: string): Promise<ScrapedProduct[]> {
     const url = this.createSearchUrl(searchTerm);
     try {
       const headers = {
