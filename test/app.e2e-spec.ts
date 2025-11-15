@@ -27,23 +27,24 @@ describe('AppController (e2e)', () => {
       .expect('Hello World!');
   });
 
-  describe('/scraper/validate (GET)', () => {
-    const searchTerm =
-      process.env.SCRAPER_E2E_TERM ?? 'Consola Nintendo Switch 2';
+  describe('/scraper/stores/:store/search (GET)', () => {
+    const searchQuery =
+      process.env.SCRAPER_E2E_QUERY ?? 'Consola Nintendo Switch 2';
     const skipLiveTests = process.env.SCRAPER_SKIP_LIVE_TESTS === 'true';
-    const availableSources = Object.values(Source);
+    const [falabella, ...rest] = Object.values(Source);
+    const availableStores = rest;
 
     const maybeTest = skipLiveTests ? it.skip : it;
 
-    maybeTest.each(availableSources)(
+    maybeTest.each(availableStores)(
       'returns products for %s',
-      async (source) => {
+      async (store) => {
         const response = await request(app.getHttpServer())
-          .get('/scraper/validate')
-          .query({ term: searchTerm, source })
+          .get(`/scraper/stores/${store}/search`)
+          .query({ query: searchQuery })
           .expect(200);
 
-        expect(response.body.source).toBe(source);
+        expect(response.body.store).toBe(store);
         expect(response.body.error).toBeUndefined();
         expect(Array.isArray(response.body.data)).toBe(true);
         expect(response.body.data.length).toBeGreaterThan(0);

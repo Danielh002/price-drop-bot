@@ -4,6 +4,7 @@ import {
   Get,
   HttpException,
   Logger,
+  Param,
   Query,
 } from '@nestjs/common';
 import { ScraperService, Source } from './scraper.service';
@@ -12,7 +13,7 @@ import { Product } from 'src/entities/product.entity';
 @Controller('scraper')
 export class ScraperController {
   private readonly logger = new Logger(ScraperController.name);
-  private readonly defaultPlatforms: Source[] = [
+  private readonly defaultStores: Source[] = [
     Source.MERCADO_LIBRE,
     Source.FALABELLA,
     Source.EXITO,
@@ -23,23 +24,23 @@ export class ScraperController {
 
   @Get('search')
   async search(
-    @Query('term') searchTerm: string,
-    @Query('sources') sources?: string | string[],
+    @Query('query') query: string,
+    @Query('stores') stores?: string | string[],
   ) {
-    const normalizedTerm = this.normalizeSearchTerm(searchTerm);
-    const platforms = this.parseSourcesParam(sources);
+    const normalizedTerm = this.normalizeSearchTerm(query);
+    const selectedStores = this.parseStoresParam(stores);
 
     const allProducts: Product[] = [];
 
-    for (const platform of platforms) {
+    for (const store of selectedStores) {
       try {
         const products = await this.scraperService.scrape(
           normalizedTerm,
-          platform,
+          store,
         );
         allProducts.push(...products);
       } catch (error) {
-        this.logger.log(`Failed to scrape ${platform}: ${error.message}`);
+        this.logger.log(`Failed to scrape ${store}: ${error.message}`);
       }
     }
 
@@ -51,29 +52,29 @@ export class ScraperController {
     return { data: allProducts, cheapest: cheapestProducts };
   }
 
-  @Get('validate')
+  @Get('stores/:store/search')
   async validate(
-    @Query('term') searchTerm: string,
-    @Query('source') source: string,
+    @Param('store') store: string,
+    @Query('query') query: string,
   ) {
-    const normalizedTerm = this.normalizeSearchTerm(searchTerm);
-    const normalizedSource = this.normalizeSource(source);
+    const normalizedTerm = this.normalizeSearchTerm(query);
+    const normalizedStore = this.normalizeStore(store);
 
-    return this.executeSingleSourceScrape(normalizedTerm, normalizedSource, {
+    return this.executeSingleStoreScrape(normalizedTerm, normalizedStore, {
       raw: false,
       context: 'Validation',
     });
   }
 
-  @Get('raw')
+  @Get('stores/:store/raw-search')
   async raw(
-    @Query('term') searchTerm: string,
-    @Query('source') source: string,
+    @Param('store') store: string,
+    @Query('query') query: string,
   ) {
-    const normalizedTerm = this.normalizeSearchTerm(searchTerm);
-    const normalizedSource = this.normalizeSource(source);
+    const normalizedTerm = this.normalizeSearchTerm(query);
+    const normalizedStore = this.normalizeStore(store);
 
-    return this.executeSingleSourceScrape(normalizedTerm, normalizedSource, {
+    return this.executeSingleStoreScrape(normalizedTerm, normalizedStore, {
       raw: true,
       context: 'Raw scrape',
     });
@@ -87,70 +88,70 @@ export class ScraperController {
     return normalized;
   }
 
-  private parseSourcesParam(
-    sources?: string | string[],
-    defaults: Source[] = this.defaultPlatforms,
+  private parseStoresParam(
+    stores?: string | string[],
+    defaults: Source[] = this.defaultStores,
   ): Source[] {
-    if (!sources) {
+    if (!stores) {
       return defaults;
     }
 
-    const parsedSources = (Array.isArray(sources) ? sources : sources.split(','))
-      .map((source) => source.trim().toLowerCase())
+    const parsedStores = (Array.isArray(stores) ? stores : stores.split(','))
+      .map((store) => store.trim().toLowerCase())
       .filter(Boolean);
 
-    if (!parsedSources.length) {
-      throw new BadRequestException('At least one source must be provided');
+    if (!parsedStores.length) {
+      throw new BadRequestException('At least one store must be provided');
     }
 
-    const uniqueSources = [...new Set(parsedSources)];
-    const invalidSources = uniqueSources.filter(
-      (source) => !Object.values(Source).includes(source as Source),
+    const uniqueStores = [...new Set(parsedStores)];
+    const invalidStores = uniqueStores.filter(
+      (store) => !Object.values(Source).includes(store as Source),
     );
 
-    if (invalidSources.length) {
+    if (invalidStores.length) {
       throw new BadRequestException(
-        `Unsupported sources: ${invalidSources.join(', ')}`,
+        `Unsupported stores: ${invalidStores.join(', ')}`,
       );
     }
 
-    return uniqueSources as Source[];
+    return uniqueStores as Source[];
   }
 
-  private normalizeSource(source?: string): Source {
-    const normalized = source?.trim().toLowerCase();
+  private normalizeStore(store?: string): Source {
+    const normalized = store?.trim().toLowerCase();
     if (!normalized) {
-      throw new BadRequestException('Source is required');
+      throw new BadRequestException('Store is required');
     }
 
     if (!Object.values(Source).includes(normalized as Source)) {
-      throw new BadRequestException(`Unsupported source: ${normalized}`);
+      throw new BadRequestException(`Unsupported store: ${normalized}`);
     }
 
     return normalized as Source;
   }
 
-  private async executeSingleSourceScrape(
+  private async executeSingleStoreScrape(
     searchTerm: string,
-    source: Source,
+    store: Source,
     options: { raw: boolean; context: string },
   ) {
     try {
       const data = options.raw
-        ? await this.scraperService.scrapeRaw(searchTerm, source)
-        : await this.scraperService.scrape(searchTerm, source);
+        ? await this.scraperService.scrapeRaw(searchTerm, store)
+        : await this.scraperService.scrape(searchTerm, store);
 
       return {
-        source,
+        store,
         data,
       };
     } catch (error) {
       if (error instanceof HttpException) {
         this.logger.warn(
-          `${options.context} failed for ${source}: ${error.message}`,
+          `${options.context} failed for ${store}: ${error.message}`,
         );
         return {
-          source,
+          store,
           data: [],
           error: {
             status: error.getStatus(),

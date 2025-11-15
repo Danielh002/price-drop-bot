@@ -16,8 +16,8 @@ import { createObjectCsvWriter } from 'csv-writer';
 import { kmeans } from 'ml-kmeans';
 
 export enum Source {
-  MERCADO_LIBRE = 'mercadolibre',
   FALABELLA = 'falabella',
+  MERCADO_LIBRE = 'mercadolibre',
   EXITO = 'exito',
   ALKOSTO = 'alkosto',
 }
