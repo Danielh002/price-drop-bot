@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from './../src/app.module';
-import { Source } from '../src/scraper/scraper.service';
+import { StoreCode } from '../src/scraper/scraper.service';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
@@ -31,7 +31,7 @@ describe('AppController (e2e)', () => {
     const searchQuery =
       process.env.SCRAPER_E2E_QUERY ?? 'Consola Nintendo Switch 2';
     const skipLiveTests = process.env.SCRAPER_SKIP_LIVE_TESTS === 'true';
-    const availableStores = Object.values(Source);
+    const availableStores = Object.values(StoreCode);
 
     const maybeTest = skipLiveTests ? it.skip : it;
 

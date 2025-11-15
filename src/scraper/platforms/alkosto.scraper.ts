@@ -1,6 +1,6 @@
 import {
-  PlatformScraper,
-  PlatformConfig,
+  StoreScraper,
+  StoreConfig,
   ScrapedProduct,
 } from '../scraper.interface';
 import { HttpService } from '@nestjs/axios';
@@ -8,10 +8,10 @@ import { firstValueFrom } from 'rxjs';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import * as fs from 'fs';
 
-export class AlkostoScraper implements PlatformScraper {
+export class AlkostoScraper implements StoreScraper {
   private readonly mainUrl = 'https://www.alkosto.com';
   constructor(
-    private readonly config: PlatformConfig,
+    private readonly config: StoreConfig,
     private readonly httpService: HttpService,
   ) {}
 

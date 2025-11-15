@@ -1,6 +1,6 @@
 import {
-  PlatformScraper,
-  PlatformConfig,
+  StoreScraper,
+  StoreConfig,
   ScrapedProduct,
 } from '../scraper.interface';
 import { HttpService } from '@nestjs/axios';
@@ -9,11 +9,11 @@ import * as cheerio from 'cheerio';
 import { Logger } from '@nestjs/common';
 import { writeFileSync } from 'fs';
 
-export class MercadoLibreScraper implements PlatformScraper {
+export class MercadoLibreScraper implements StoreScraper {
   private readonly logger = new Logger(MercadoLibreScraper.name);
 
   constructor(
-    private readonly config: PlatformConfig,
+    private readonly config: StoreConfig,
     private readonly httpService: HttpService,
   ) {}
 

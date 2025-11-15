@@ -1,19 +1,19 @@
 import {
-  PlatformConfig,
-  PlatformScraper,
+  StoreConfig,
+  StoreScraper,
   ScrapedProduct,
 } from '../scraper.interface';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { Logger } from '@nestjs/common';
 
-export class ExitoScraper implements PlatformScraper {
+export class ExitoScraper implements StoreScraper {
   private readonly logger = new Logger(ExitoScraper.name);
   private readonly baseUrl: string;
   private cache: { etag: string; response: any } | null = null;
 
   constructor(
-    private readonly config: PlatformConfig,
+    private readonly config: StoreConfig,
     private readonly httpService: HttpService,
   ) {
     this.baseUrl = config.baseUrl;

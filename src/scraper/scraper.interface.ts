@@ -1,4 +1,6 @@
-export interface PlatformScraper {
+import type * as cheerio from 'cheerio';
+
+export interface StoreScraper {
   scrape(searchTerm: string, $?: cheerio.CheerioAPI): Promise<ScrapedProduct[]>;
 }
 
@@ -6,7 +8,7 @@ export interface FilterConfig {
   priceQuantile: number; // Fallback for small result sets
 }
 
-export interface PlatformConfig {
+export interface StoreConfig {
   baseUrl: string;
   separator: string;
   country: string;

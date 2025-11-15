@@ -5,8 +5,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from '../entities/product.entity';
 import {
   FilterConfig,
-  PlatformConfig,
-  PlatformScraper,
+  StoreConfig,
+  StoreScraper,
   ScrapedProduct,
 } from './scraper.interface';
 import { MercadoLibreScraper } from './platforms/mercadolibre.scraper';
@@ -17,15 +17,15 @@ import { kmeans } from 'ml-kmeans';
 import { Store, ScrapeType } from '../entities/store.entity';
 import { ProductPrice } from '../entities/product-price.entity';
 
-export enum Source {
+export enum StoreCode {
   FALABELLA = 'falabella',
   MERCADO_LIBRE = 'mercadolibre',
   EXITO = 'exito',
   ALKOSTO = 'alkosto',
 }
 
-const platformConfig: Record<Source, PlatformConfig> = {
-  [Source.MERCADO_LIBRE]: {
+const storeConfig: Record<StoreCode, StoreConfig> = {
+  [StoreCode.MERCADO_LIBRE]: {
     baseUrl: 'https://listado.mercadolibre.com.co/',
     separator: '-',
     country: 'Colombia',
@@ -35,7 +35,7 @@ const platformConfig: Record<Source, PlatformConfig> = {
       priceQuantile: 0.75,
     },
   },
-  [Source.FALABELLA]: {
+  [StoreCode.FALABELLA]: {
     baseUrl: 'https://www.falabella.com.co/falabella-co/search?Ntt=',
     separator: '+',
     country: 'Colombia',
@@ -45,7 +45,7 @@ const platformConfig: Record<Source, PlatformConfig> = {
       priceQuantile: 0.75,
     },
   },
-  [Source.EXITO]: {
+  [StoreCode.EXITO]: {
     baseUrl: 'https://www.exito.com/',
     separator: '%20',
     country: 'Colombia',
@@ -55,7 +55,7 @@ const platformConfig: Record<Source, PlatformConfig> = {
       priceQuantile: 0.75,
     },
   },
-  [Source.ALKOSTO]: {
+  [StoreCode.ALKOSTO]: {
     baseUrl: 'https://qx5ips1b1q-dsn.algolia.net/1/indexes/*/queries',
     separator: '%20',
     country: 'Colombia',
@@ -68,25 +68,25 @@ const platformConfig: Record<Source, PlatformConfig> = {
 };
 
 const storeMetadata: Record<
-  Source,
+  StoreCode,
   { name: string; urlBase: string; scrapeType: ScrapeType; logoUrl?: string }
 > = {
-  [Source.MERCADO_LIBRE]: {
+  [StoreCode.MERCADO_LIBRE]: {
     name: 'Mercado Libre',
     urlBase: 'https://www.mercadolibre.com.co',
     scrapeType: 'html',
   },
-  [Source.FALABELLA]: {
+  [StoreCode.FALABELLA]: {
     name: 'Falabella',
     urlBase: 'https://www.falabella.com.co',
     scrapeType: 'headless',
   },
-  [Source.EXITO]: {
+  [StoreCode.EXITO]: {
     name: 'Éxito',
     urlBase: 'https://www.exito.com',
     scrapeType: 'api',
   },
-  [Source.ALKOSTO]: {
+  [StoreCode.ALKOSTO]: {
     name: 'Alkosto',
     urlBase: 'https://www.alkosto.com',
     scrapeType: 'api',
@@ -96,17 +96,17 @@ const storeMetadata: Record<
 @Injectable()
 export class ScraperService {
   private readonly logger = new Logger(ScraperService.name);
-  private readonly storeCache = new Map<Source, Store>();
+  private readonly storeCache = new Map<StoreCode, Store>();
   private readonly scrapers: Record<
-    Source,
-    (config: PlatformConfig, httpService: HttpService) => PlatformScraper
+    StoreCode,
+    (config: StoreConfig, httpService: HttpService) => StoreScraper
   > = {
-    [Source.MERCADO_LIBRE]: (config, httpService) =>
+    [StoreCode.MERCADO_LIBRE]: (config, httpService) =>
       new MercadoLibreScraper(config, httpService),
-    [Source.FALABELLA]: (config) => new FalabellaScraper(config),
-    [Source.EXITO]: (config, httpService) =>
+    [StoreCode.FALABELLA]: (config) => new FalabellaScraper(config),
+    [StoreCode.EXITO]: (config, httpService) =>
       new ExitoScraper(config, httpService),
-    [Source.ALKOSTO]: (config, httpService) =>
+    [StoreCode.ALKOSTO]: (config, httpService) =>
       new AlkostoScraper(config, httpService),
   };
 
@@ -120,18 +120,18 @@ export class ScraperService {
     private readonly productPriceRepository: Repository<ProductPrice>,
   ) {}
 
-  private getScraper(platform: string): PlatformScraper {
-    const source = platform.toLowerCase() as Source;
+  private getStoreScraper(store: string): StoreScraper {
+    const source = store.toLowerCase() as StoreCode;
     if (!this.scrapers[source]) {
       throw new HttpException(
-        `Platform ${platform} is not supported`,
+        `Store ${store} is not supported`,
         HttpStatus.BAD_REQUEST,
       );
     }
-    return this.scrapers[source](platformConfig[source], this.httpService);
+    return this.scrapers[source](storeConfig[source], this.httpService);
   }
 
-  private async getOrCreateStore(source: Source): Promise<Store> {
+  private async getOrCreateStore(source: StoreCode): Promise<Store> {
     if (this.storeCache.has(source)) {
       return this.storeCache.get(source)!;
     }
@@ -142,7 +142,7 @@ export class ScraperService {
 
     if (!store) {
       const metadata = storeMetadata[source];
-      const config = platformConfig[source];
+      const config = storeConfig[source];
       store = this.storeRepository.create({
         code: source,
         name: metadata.name,
@@ -160,7 +160,7 @@ export class ScraperService {
 
   private async persistProducts(
     searchTerm: string,
-    source: Source,
+    source: StoreCode,
     products: ScrapedProduct[],
   ): Promise<Product[]> {
     const store = await this.getOrCreateStore(source);
@@ -193,7 +193,7 @@ export class ScraperService {
       entity.country =
         scrapedProduct.country ??
         entity.country ??
-        platformConfig[source].country;
+        storeConfig[source].country;
       entity.searchTerm = searchTerm;
       entity.category = scrapedProduct.category ?? entity.category;
       entity.sku = scrapedProduct.sku ?? entity.sku;
@@ -213,20 +213,20 @@ export class ScraperService {
     return savedProducts;
   }
 
-  async scrape(searchTerm: string, platform: string): Promise<Product[]> {
-    const source = platform.toLowerCase() as Source;
-    const config = platformConfig[source];
+  async scrape(searchTerm: string, store: string): Promise<Product[]> {
+    const source = store.toLowerCase() as StoreCode;
+    const config = storeConfig[source];
     if (!config) {
       throw new HttpException(
-        `Platform ${platform} is not supported`,
+        `Store ${store} is not supported`,
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    const products = await this.getScraper(platform).scrape(searchTerm);
+    const products = await this.getStoreScraper(store).scrape(searchTerm);
     if (!products.length) {
       throw new HttpException(
-        `No data scraped from ${platform}`,
+        `No data scraped from ${store}`,
         HttpStatus.NOT_FOUND,
       );
     }
@@ -237,7 +237,7 @@ export class ScraperService {
       config.filterConfig,
     );
     this.logger.debug(
-      `Filtered ${filteredProducts.length} products from ${platform}`,
+      `Filtered ${filteredProducts.length} products from ${store}`,
       filteredProducts.map((product) => ({
         name: product.name,
         price: product.price,
@@ -247,7 +247,7 @@ export class ScraperService {
     );
     if (!filteredProducts.length) {
       throw new HttpException(
-        `No precise data after filtering for ${platform}`,
+        `No precise data after filtering for ${store}`,
         HttpStatus.NOT_FOUND,
       );
     }
@@ -263,21 +263,21 @@ export class ScraperService {
 
   async scrapeRaw(
     searchTerm: string,
-    platform: string,
+    store: string,
   ): Promise<ScrapedProduct[]> {
-    const source = platform.toLowerCase() as Source;
-    const config = platformConfig[source];
+    const source = store.toLowerCase() as StoreCode;
+    const config = storeConfig[source];
     if (!config) {
       throw new HttpException(
-        `Platform ${platform} is not supported`,
+        `Store ${store} is not supported`,
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    const products = await this.getScraper(platform).scrape(searchTerm);
+    const products = await this.getStoreScraper(store).scrape(searchTerm);
     if (!products.length) {
       throw new HttpException(
-        `No data scraped from ${platform}`,
+        `No data scraped from ${store}`,
         HttpStatus.NOT_FOUND,
       );
     }

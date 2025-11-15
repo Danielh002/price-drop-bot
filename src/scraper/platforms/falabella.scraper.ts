@@ -1,6 +1,6 @@
 import {
-  PlatformConfig,
-  PlatformScraper,
+  StoreConfig,
+  StoreScraper,
   ScrapedProduct,
 } from '../scraper.interface';
 import * as cheerio from 'cheerio';
@@ -8,10 +8,10 @@ import * as puppeteer from 'puppeteer';
 import { Logger } from '@nestjs/common';
 import { writeFileSync } from 'fs';
 
-export class FalabellaScraper implements PlatformScraper {
+export class FalabellaScraper implements StoreScraper {
   private readonly logger = new Logger(FalabellaScraper.name);
 
-  constructor(private readonly config: PlatformConfig) {}
+  constructor(private readonly config: StoreConfig) {}
 
   private createSearchUrl(searchTerm: string): string {
     const query = searchTerm.trim().split(/\s+/).join(this.config.separator);

@@ -7,18 +7,18 @@ import {
   Param,
   Query,
 } from '@nestjs/common';
-import { ScraperService, Source } from './scraper.service';
+import { ScraperService, StoreCode } from './scraper.service';
 import { Product } from 'src/entities/product.entity';
 import { ConfigService } from '@nestjs/config';
 
 @Controller('scraper')
 export class ScraperController {
   private readonly logger = new Logger(ScraperController.name);
-  private readonly defaultStores: Source[] = [
-    Source.MERCADO_LIBRE,
-    Source.FALABELLA,
-    Source.EXITO,
-    Source.ALKOSTO,
+  private readonly defaultStores: StoreCode[] = [
+    StoreCode.MERCADO_LIBRE,
+    StoreCode.FALABELLA,
+    StoreCode.EXITO,
+    StoreCode.ALKOSTO,
   ];
 
   constructor(
@@ -114,8 +114,8 @@ export class ScraperController {
 
   private parseStoresParam(
     stores?: string | string[],
-    defaults: Source[] = this.defaultStores,
-  ): Source[] {
+    defaults: StoreCode[] = this.defaultStores,
+  ): StoreCode[] {
     if (!stores) {
       return defaults;
     }
@@ -130,7 +130,7 @@ export class ScraperController {
 
     const uniqueStores = [...new Set(parsedStores)];
     const invalidStores = uniqueStores.filter(
-      (store) => !Object.values(Source).includes(store as Source),
+      (store) => !Object.values(StoreCode).includes(store as StoreCode),
     );
 
     if (invalidStores.length) {
@@ -139,25 +139,25 @@ export class ScraperController {
       );
     }
 
-    return uniqueStores as Source[];
+    return uniqueStores as StoreCode[];
   }
 
-  private normalizeStore(store?: string): Source {
+  private normalizeStore(store?: string): StoreCode {
     const normalized = store?.trim().toLowerCase();
     if (!normalized) {
       throw new BadRequestException('Store is required');
     }
 
-    if (!Object.values(Source).includes(normalized as Source)) {
+    if (!Object.values(StoreCode).includes(normalized as StoreCode)) {
       throw new BadRequestException(`Unsupported store: ${normalized}`);
     }
 
-    return normalized as Source;
+    return normalized as StoreCode;
   }
 
   private async executeSingleStoreScrape(
     searchTerm: string,
-    store: Source,
+    store: StoreCode,
     options: { raw: boolean; context: string },
     limit?: number,
   ) {

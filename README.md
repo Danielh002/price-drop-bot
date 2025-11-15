@@ -96,16 +96,15 @@ Stores an alert. Every hour the `AlertsService` cron job re-scrapes all supporte
 
 ## Data Pipeline Highlights
 
-1. **Scraping:** Each platform has its own class under `src/scraper/platforms`. HTTP-only sources use Axios + Cheerio, while complex pages fall back to Puppeteer (Falabella) or Algolia’s API (Alkosto).
+1. **Scraping:** Each store has its own class under `src/scraper/platforms`. HTTP-only sources use Axios + Cheerio, while complex pages fall back to Puppeteer (Falabella) or Algolia’s API (Alkosto).
 2. **Normalization:** `ScraperService` enriches every record with country, currency, store, and timestamps before saving.
 3. **Filtering & Dedup:** The service deduplicates by `store + normalized name + seller`, then keeps the most relevant products using either a high-price quantile or k-means clustering on price distribution to remove noise.
 4. **Persistence:** All results are saved to SQLite through TypeORM, enabling historical lookups.
-5. **CSV Export:** Every search also exports a CSV so analysts can inspect the raw dataset offline.
 
 ## Extending the Scraper
 
-1. Create a new class in `src/scraper/platforms/<store>.scraper.ts` implementing `PlatformScraper`.
-2. Add its configuration to `platformConfig` in `scraper.service.ts`.
+1. Create a new class in `src/scraper/platforms/<store>.scraper.ts` implementing `StoreScraper`.
+2. Add its configuration to `storeConfig` in `scraper.service.ts`.
 3. Register the factory in `ScraperService.scrapers`.
 4. (Optional) Update enums in the frontend so users can query the new store.
 

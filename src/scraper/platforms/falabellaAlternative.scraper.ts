@@ -1,6 +1,6 @@
 import {
-  PlatformConfig,
-  PlatformScraper,
+  StoreConfig,
+  StoreScraper,
   ScrapedProduct,
 } from '../scraper.interface';
 import * as cheerio from 'cheerio';
@@ -10,11 +10,11 @@ import { firstValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { writeFile, writeFileSync } from 'fs';
 
-export class FalabellaScraper implements PlatformScraper {
+export class FalabellaScraper implements StoreScraper {
   private readonly logger = new Logger(FalabellaScraper.name);
 
   constructor(
-    private readonly config: PlatformConfig,
+    private readonly config: StoreConfig,
     private readonly httpService: HttpService,
   ) {}
 

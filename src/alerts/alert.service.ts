@@ -3,9 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Alert } from '../entities/alert.entity';
 import { Product } from '../entities/product.entity';
-import { ScraperService } from '../scraper/scraper.service';
+import { ScraperService, StoreCode } from '../scraper/scraper.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { Source } from '../scraper/scraper.service';
 
 @Injectable()
 export class AlertsService {
@@ -33,18 +32,18 @@ export class AlertsService {
   @Cron(CronExpression.EVERY_HOUR) // Runs hourly
   async checkAlerts(): Promise<void> {
     const alerts = await this.alertRepository.find();
-    const platforms = [
-      Source.MERCADO_LIBRE,
-      Source.FALABELLA,
-      Source.EXITO,
-      Source.ALKOSTO,
+    const stores = [
+      StoreCode.MERCADO_LIBRE,
+      StoreCode.FALABELLA,
+      StoreCode.EXITO,
+      StoreCode.ALKOSTO,
     ];
 
     for (const alert of alerts) {
       let lowestPrice = Infinity;
       let cheapestProduct: Product | null = null;
 
-      for (const platform of platforms) {
+      for (const platform of stores) {
         try {
           const products = await this.scraperService.scrape(
             alert.searchTerm,
