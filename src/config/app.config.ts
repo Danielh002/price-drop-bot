@@ -5,6 +5,7 @@ export const appConfig = registerAs('app', () => ({
   webOrigins: process.env.WEB_ORIGINS?.split(',').map((origin) =>
     origin.trim(),
   ) ?? ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  resultsPerStore: parseInt(process.env.RESULTS_PER_STORE ?? '10', 10),
 }));
 
 export const databaseConfig = registerAs('database', () => ({

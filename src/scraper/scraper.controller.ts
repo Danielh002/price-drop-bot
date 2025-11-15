@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { ScraperService, Source } from './scraper.service';
 import { Product } from 'src/entities/product.entity';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('scraper')
 export class ScraperController {
@@ -20,7 +21,10 @@ export class ScraperController {
     Source.ALKOSTO,
   ];
 
-  constructor(private readonly scraperService: ScraperService) {}
+  constructor(
+    private readonly scraperService: ScraperService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Get('search')
   async search(
@@ -47,7 +51,10 @@ export class ScraperController {
     const cheapestProducts =
       await this.scraperService.getCheapestProducts(normalizedTerm);
 
-    const serializedProducts = allProducts.map((product) =>
+    const limit =
+      this.configService.get<number>('app.resultsPerStore') ?? 10;
+    const limitedProducts = this.limitPerStore(allProducts, limit);
+    const serializedProducts = limitedProducts.map((product) =>
       this.serializeProduct(product),
     );
     const serializedCheapest = cheapestProducts.map((product) =>
@@ -65,10 +72,17 @@ export class ScraperController {
     const normalizedTerm = this.normalizeSearchTerm(query);
     const normalizedStore = this.normalizeStore(store);
 
-    return this.executeSingleStoreScrape(normalizedTerm, normalizedStore, {
-      raw: false,
-      context: 'Validation',
-    });
+    const limit =
+      this.configService.get<number>('app.resultsPerStore') ?? 10;
+    return this.executeSingleStoreScrape(
+      normalizedTerm,
+      normalizedStore,
+      {
+        raw: false,
+        context: 'Validation',
+      },
+      limit,
+    );
   }
 
   @Get('stores/:store/raw-search')
@@ -79,10 +93,15 @@ export class ScraperController {
     const normalizedTerm = this.normalizeSearchTerm(query);
     const normalizedStore = this.normalizeStore(store);
 
-    return this.executeSingleStoreScrape(normalizedTerm, normalizedStore, {
-      raw: true,
-      context: 'Raw scrape',
-    });
+    return this.executeSingleStoreScrape(
+      normalizedTerm,
+      normalizedStore,
+      {
+        raw: true,
+        context: 'Raw scrape',
+      },
+      undefined,
+    );
   }
 
   private normalizeSearchTerm(term?: string): string {
@@ -140,17 +159,21 @@ export class ScraperController {
     searchTerm: string,
     store: Source,
     options: { raw: boolean; context: string },
+    limit?: number,
   ) {
     try {
       const data = options.raw
         ? await this.scraperService.scrapeRaw(searchTerm, store)
         : await this.scraperService.scrape(searchTerm, store);
 
+      const processedData = options.raw
+        ? data
+        : this.limitPerStore(data as Product[], limit).map((product) =>
+            this.serializeProduct(product),
+          );
       return {
         store,
-        data: options.raw
-          ? data
-          : (data as Product[]).map((product) => this.serializeProduct(product)),
+        data: processedData,
       };
     } catch (error) {
       if (error instanceof HttpException) {
@@ -168,6 +191,33 @@ export class ScraperController {
       }
       throw error;
     }
+  }
+
+  private limitPerStore(
+    products: Product[],
+    limit = this.configService.get<number>('app.resultsPerStore') ?? 10,
+  ): Product[] {
+    if (!limit || limit <= 0) {
+      return products;
+    }
+
+    const grouped = new Map<string, Product[]>();
+    for (const product of products) {
+      const key =
+        typeof product.store === 'string'
+          ? product.store
+          : product.store?.code ?? product.store?.name ?? 'unknown';
+      if (!grouped.has(key)) {
+        grouped.set(key, []);
+      }
+      grouped.get(key)!.push(product);
+    }
+
+    const limited: Product[] = [];
+    for (const storeProducts of grouped.values()) {
+      limited.push(...storeProducts.slice(0, limit));
+    }
+    return limited;
   }
 
   private serializeProduct(product: Product | Partial<Product>) {
