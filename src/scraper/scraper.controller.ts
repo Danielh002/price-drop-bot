@@ -44,12 +44,17 @@ export class ScraperController {
       }
     }
 
-    this.scraperService.writeProductsToCsv(normalizedTerm, allProducts);
-
     const cheapestProducts =
       await this.scraperService.getCheapestProducts(normalizedTerm);
 
-    return { data: allProducts, cheapest: cheapestProducts };
+    const serializedProducts = allProducts.map((product) =>
+      this.serializeProduct(product),
+    );
+    const serializedCheapest = cheapestProducts.map((product) =>
+      this.serializeProduct(product),
+    );
+
+    return { data: serializedProducts, cheapest: serializedCheapest };
   }
 
   @Get('stores/:store/search')
@@ -143,7 +148,9 @@ export class ScraperController {
 
       return {
         store,
-        data,
+        data: options.raw
+          ? data
+          : (data as Product[]).map((product) => this.serializeProduct(product)),
       };
     } catch (error) {
       if (error instanceof HttpException) {
@@ -161,5 +168,17 @@ export class ScraperController {
       }
       throw error;
     }
+  }
+
+  private serializeProduct(product: Product | Partial<Product>) {
+    const store =
+      typeof product.store === 'string'
+        ? product.store
+        : product.store?.code ?? product.store?.name ?? null;
+
+    return {
+      ...product,
+      store,
+    };
   }
 }

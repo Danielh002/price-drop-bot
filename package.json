@@ -29,7 +29,6 @@
     "@nestjs/typeorm": "^11.0.0",
     "axios": "^1.11.0",
     "cheerio": "^1.1.0",
-    "csv-writer": "^1.6.0",
     "dotenv": "^17.2.1",
     "ml-kmeans": "^6.0.0",
     "pg": "^8.16.3",

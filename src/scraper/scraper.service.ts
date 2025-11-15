@@ -13,7 +13,6 @@ import { MercadoLibreScraper } from './platforms/mercadolibre.scraper';
 import { FalabellaScraper } from './platforms/falabella.scraper';
 import { ExitoScraper } from './platforms/exito.scraper';
 import { AlkostoScraper } from './platforms/alkosto.scraper';
-import { createObjectCsvWriter } from 'csv-writer';
 import { kmeans } from 'ml-kmeans';
 import { Store, ScrapeType } from '../entities/store.entity';
 import { ProductPrice } from '../entities/product-price.entity';
@@ -192,7 +191,9 @@ export class ScraperService {
       entity.brand = scrapedProduct.brand ?? entity.brand;
       entity.seller = scrapedProduct.seller ?? entity.seller;
       entity.country =
-        scrapedProduct.country ?? entity.country ?? platformConfig[source].country;
+        scrapedProduct.country ??
+        entity.country ??
+        platformConfig[source].country;
       entity.searchTerm = searchTerm;
       entity.category = scrapedProduct.category ?? entity.category;
       entity.sku = scrapedProduct.sku ?? entity.sku;
@@ -423,9 +424,7 @@ export class ScraperService {
       .trim();
   }
 
-  private deduplicateProducts(
-    products: ScrapedProduct[],
-  ): ScrapedProduct[] {
+  private deduplicateProducts(products: ScrapedProduct[]): ScrapedProduct[] {
     const seen = new Map<string, ScrapedProduct>();
     for (const product of products) {
       const key = `${product.store}:${product.name.toLowerCase().replace(/[^a-z0-9]/g, '')}:${product.seller}`;
@@ -449,49 +448,4 @@ export class ScraperService {
       .getMany();
   }
 
-  async writeProductsToCsv(
-    searchTerm: string,
-    products: Partial<Product>[],
-  ): Promise<string> {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = `products_${searchTerm.replace(' ', '_')}_${timestamp}.csv`;
-
-    const csvWriter = createObjectCsvWriter({
-      path: fileName,
-      header: [
-        { id: 'name', title: 'Name' },
-        { id: 'price', title: 'Price' },
-        { id: 'url', title: 'URL' },
-        { id: 'image', title: 'Image' },
-        { id: 'seller', title: 'Seller' },
-        { id: 'store', title: 'Store' },
-        { id: 'country', title: 'Country' },
-        { id: 'currency', title: 'Currency' },
-        { id: 'searchTerm', title: 'SearchTerm' },
-        { id: 'brand', title: 'Brand' },
-        { id: 'scrapedAt', title: 'ScrapedAt' },
-      ],
-    });
-
-    const records = products.map((p) => ({
-      name: p.name || 'N/A',
-      price: p.price || 0,
-      url: p.url || 'N/A',
-      image: p.image || 'N/A',
-      seller: p.seller || 'N/A',
-      store:
-        typeof p.store === 'string'
-          ? p.store
-          : p.store?.code || p.store?.name || 'N/A',
-      brand: p.brand || 'N/A',
-      country: p.country || 'N/A',
-      currency: p.currency || 'N/A',
-      searchTerm: p.searchTerm || 'N/A',
-      scrapedAt: p.scrapedAt ? p.scrapedAt.toISOString() : 'N/A',
-    }));
-
-    await csvWriter.writeRecords(records);
-    console.log(`CSV written to ${fileName}`);
-    return fileName;
-  }
 }
