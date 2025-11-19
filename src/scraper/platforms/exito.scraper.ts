@@ -50,7 +50,7 @@ export class ExitoScraper implements StoreScraper {
 
       products.push({
         name,
-        price: Math.round(price * 100),
+        price: parseFloat(price),
         url,
         store: this.config.store,
         country: this.config.country,
